@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="default_web_client_id" translatable="false">300353354116-bigm93gijg4013dro7qnkg4je67curtg.apps.googleusercontent.com</string>
+    <string name="firebase_database_url" translatable="false">https://paintthetown-eb827.firebaseio.com</string>
+    <string name="gcm_defaultSenderId" translatable="false">300353354116</string>
+    <string name="google_api_key" translatable="false">AIzaSyC5FfNSE8qBmO4FbXV4_g5djRajwl2iB2g</string>
+    <string name="google_app_id" translatable="false">1:300353354116:android:b7ba72c5ae1b4f04</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyC5FfNSE8qBmO4FbXV4_g5djRajwl2iB2g</string>
+    <string name="google_storage_bucket" translatable="false">paintthetown-eb827.appspot.com</string>
+</resources>

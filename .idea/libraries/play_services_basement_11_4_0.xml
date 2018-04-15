@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="play-services-basement-11.4.0">
+    <CLASSES>
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-1/files-1.1/play-services-basement-11.4.0.aar/d9cac19e0101a1833c1fbd30c3103b0c/res" />
+      <root url="jar://$USER_HOME$/.gradle/caches/transforms-1/files-1.1/play-services-basement-11.4.0.aar/d9cac19e0101a1833c1fbd30c3103b0c/jars/classes.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

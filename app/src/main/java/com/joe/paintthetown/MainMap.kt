@@ -26,12 +26,22 @@ import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.ApiException
 import android.location.Location
 import android.os.StrictMode
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import com.cocoahero.android.geojson.*
 import com.cocoahero.android.geojson.Polygon
 import com.firebase.ui.auth.AuthUI
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.Scopes
+import com.google.android.gms.common.api.Scope
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.android.gms.tasks.Task
+import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.maps.android.geojson.GeoJsonLayer
 import org.json.JSONObject
 import retrofit2.Retrofit
@@ -73,6 +83,13 @@ class MainMap : AppCompatActivity(), OnMapReadyCallback {
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .build()
+
+
+        signIn()
+
         if (mAuth.currentUser != null) {
             mAuth.currentUser!!.getIdToken(true).addOnSuccessListener({ result ->
                  token = result.token
@@ -80,19 +97,9 @@ class MainMap : AppCompatActivity(), OnMapReadyCallback {
             })
 
         } else {
-            val RC_SIGN_IN = 123;
 
-// ...
 
-            startActivityForResult(
-                    AuthUI.getInstance()
-                            .createSignInIntentBuilder()
-                            .setAvailableProviders(
-                                    Arrays.asList(
-                                            AuthUI.IdpConfig.Builder(AuthUI.GOOGLE_PROVIDER).build()
-                                    ))
-                            .build(),
-                    RC_SIGN_IN)
+            signIn()
         } // not signed in
     }
 
@@ -258,42 +265,63 @@ class MainMap : AppCompatActivity(), OnMapReadyCallback {
         return loc1.distanceTo(loc2)
     }
 
-    protected override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
-        super.onActivityResult(requestCode, resultCode, data)
+    fun signIn() {
+
         val RC_SIGN_IN = 123;
-        // RC_SIGN_IN is the request code you passed into startActivityForResult(...) when starting the sign in flow.
-        /*   if (requestCode == RC_SIGN_IN)
-           {
-               val response = IdpResponse.fromResultIntent(data)
-               // Successfully signed in
-               if (resultCode == RESULT_OK)
-               {
-                   startActivity(MainMap.createIntent(this, response))
-                   finish()
-                   return
-               }
-               else
-               {
-                   // Sign in failed
-                   if (response == null)
-                   {
-                       // UserInformation pressed back button
-                       showSnackbar(R.string.sign_in_cancelled)
-                       return
-                   }
-                   if (response.getErrorCode() === ErrorCodes.NO_NETWORK)
-                   {
-                       showSnackbar(R.string.no_internet_connection)
-                       return
-                   }
-                   if (response.getErrorCode() === ErrorCodes.UNKNOWN_ERROR)
-                   {
-                       showSnackbar(R.string.unknown_error)
-                       return
-                   }
-               }
-               showSnackbar(R.string.unknown_sign_in_response)
-           }*/
+        var gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(getString(R.string.default_web_client_id))
+                .requestScopes( Scope(Scopes.EMAIL))
+                .requestServerAuthCode(getString(R.string.default_web_client_id))
+                //.requestEmail()
+                .build();
+
+        var mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+
+        var signInIntent = mGoogleSignInClient.getSignInIntent();
+        startActivityForResult(signInIntent, RC_SIGN_IN);
     }
 
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data:Intent) {
+        super.onActivityResult(requestCode, resultCode, data);
+        val RC_SIGN_IN = 123;
+        // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...);
+        if (requestCode == RC_SIGN_IN) {
+            var task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            try {
+                // Google Sign In was successful, authenticate with Firebase
+                var account = task.getResult()
+                        firebaseAuthWithGoogle(account)
+            } catch (e: ApiException) {
+                // Google Sign In failed, update UI appropriately
+                //Log.w(TAG, "Google sign in failed", e);
+                // ...
+            }
+        }
+    }
+
+    fun firebaseAuthWithGoogle(acct: GoogleSignInAccount) {
+        //Log.d(TAG, "firebaseAuthWithGoogle:" + acct.getId());
+
+        var credential = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
+        mAuth.signInWithCredential(credential)
+                .addOnCompleteListener(this, OnCompleteListener<AuthResult>() {
+                    @Override
+                    fun onComplete( task: Task<AuthResult>) {
+                        if (task.isSuccessful()) {
+                            // Sign in success, update UI with the signed-in user's information
+                            //Log.d(TAG, "signInWithCredential:success");
+                            var user = mAuth.getCurrentUser();
+                            //updateUI(user);
+                        } else {
+                            // If sign in fails, display a message to the user.
+                            //Log.w(TAG, "signInWithCredential:failure", task.getException());
+                            //Snackbar.make(findViewById(R.id.main_layout), "Authentication Failed.", Snackbar.LENGTH_SHORT).show();
+                            //updateUI(null);
+                        }
+
+                        // ...
+                    }
+                });
+    }
 }
