@@ -16,4 +16,8 @@ interface PTTService {
     @POST("map/SaveArea")
 
     fun SavePolygon(@Body currentPostion:String, @Header("Authorization") authHeader:String) :Call<Void>
+
+    @POST("account/Auhtorize")
+
+    fun Auhtorize(@Body authCode:String, @Header("Authorization") authHeader:String) :Call<Void>
 }

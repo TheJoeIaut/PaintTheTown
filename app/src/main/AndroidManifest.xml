@@ -29,6 +29,8 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key" />
 
+        <meta-data android:name="com.google.android.gms.games.APP_ID" android:value="300353354116" />
+
         <activity
             android:name=".MainMap"
             android:label="@string/title_activity_main_map">

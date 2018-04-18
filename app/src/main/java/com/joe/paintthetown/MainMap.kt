@@ -37,6 +37,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.Scopes
 import com.google.android.gms.common.api.Scope
+import com.google.android.gms.drive.Drive
+import com.google.android.gms.games.Games
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.AuthResult
@@ -57,19 +59,19 @@ class MainMap : AppCompatActivity(), OnMapReadyCallback {
     private var path: Polyline? = null
     private var canDrawRect: Boolean = false
     private var mAuth = FirebaseAuth.getInstance()
-    private var token :String? =null
+    private var token: String? = null
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_main_map, menu)
         return true
     }
 
-    override fun onOptionsItemSelected(item: MenuItem) :Boolean{
-        when(item.getItemId()) {
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.getItemId()) {
             R.id.refresh -> return (true)
             R.id.user -> startActivity(Intent(this, UserInformation::class.java))
         }
-        return(super.onOptionsItemSelected(item));
+        return (super.onOptionsItemSelected(item));
     }
 
 
@@ -89,8 +91,8 @@ class MainMap : AppCompatActivity(), OnMapReadyCallback {
 
 
         signIn()
-
-        if (mAuth.currentUser != null) {
+        //  LoadSurroundingAreas()
+        /*   if (mAuth.currentUser != null) {
             mAuth.currentUser!!.getIdToken(true).addOnSuccessListener({ result ->
                  token = result.token
                 LoadSurroundingAreas()
@@ -100,7 +102,7 @@ class MainMap : AppCompatActivity(), OnMapReadyCallback {
 
 
             signIn()
-        } // not signed in
+        } // not signed in*/
     }
 
 
@@ -110,7 +112,6 @@ class MainMap : AppCompatActivity(), OnMapReadyCallback {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             checkPermission();
         }
-
 
 
         val mLocationRequest = createLocationRequest();
@@ -166,7 +167,6 @@ class MainMap : AppCompatActivity(), OnMapReadyCallback {
                             mMap.addPolygon(PolygonOptions()
                                     .addAll(points)
                                     .fillColor(Color.BLUE))
-
 
 
                             var retrofit = Retrofit.Builder().baseUrl("http://paintthetownserver.azurewebsites.net/api/").addConverterFactory(GsonConverterFactory.create()).build();
@@ -267,61 +267,89 @@ class MainMap : AppCompatActivity(), OnMapReadyCallback {
 
     fun signIn() {
 
+        /*  var signInClient = GoogleSignIn.getClient(this, GoogleSignInOptions.DEFAULT_GAMES_SIGN_IN);
+
+        signInClient.silentSignIn().addOnCompleteListener{task ->
+            if (task.isSuccessful()) {
+                // The signed in account is stored in the task's result.
+                var signedInAccount = task.getResult();
+            } else {
+                // Player will need to sign-in explicitly using via UI
+            }
+        }*/
+
+
         val RC_SIGN_IN = 123;
         var gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getString(R.string.default_web_client_id))
-                .requestScopes( Scope(Scopes.EMAIL))
-                .requestServerAuthCode(getString(R.string.default_web_client_id))
-                //.requestEmail()
+                .requestIdToken("300353354116-bigm93gijg4013dro7qnkg4je67curtg.apps.googleusercontent.com")
+                .requestServerAuthCode("300353354116-bigm93gijg4013dro7qnkg4je67curtg.apps.googleusercontent.com")
+
+                .requestEmail()
                 .build();
 
         var mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
+        startActivityForResult(mGoogleSignInClient.getSignInIntent(), RC_SIGN_IN);
+
         var signInIntent = mGoogleSignInClient.getSignInIntent();
         startActivityForResult(signInIntent, RC_SIGN_IN);
+
     }
 
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data:Intent) {
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
         super.onActivityResult(requestCode, resultCode, data);
         val RC_SIGN_IN = 123;
         // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...);
-        if (requestCode == RC_SIGN_IN) {
-            var task = GoogleSignIn.getSignedInAccountFromIntent(data);
-            try {
-                // Google Sign In was successful, authenticate with Firebase
-                var account = task.getResult()
-                        firebaseAuthWithGoogle(account)
-            } catch (e: ApiException) {
-                // Google Sign In failed, update UI appropriately
-                //Log.w(TAG, "Google sign in failed", e);
-                // ...
+        if (resultCode != RESULT_CANCELED) {
+            if (requestCode == RC_SIGN_IN) {
+                var task = GoogleSignIn.getSignedInAccountFromIntent(data);
+                try {
+                    // Google Sign In was successful, authenticate with Firebase
+                    var account = task.getResult()
+                   // firebaseAuthWithGoogle(account)
+                    var authCode = account.serverAuthCode
+                    token = account.idToken
+                    firebaseAuthWithGoogle(account);
+                    var retrofit = Retrofit.Builder().baseUrl("http://paintthetownserver.azurewebsites.net/api/").addConverterFactory(GsonConverterFactory.create()).build();
+                    var service = retrofit.create(PTTService::class.java)
+                    service.Auhtorize(authCode.toString(), "token $token").execute()
+
+                } catch (e: ApiException) {
+                    // Google Sign In failed, update UI appropriately
+                    //Log.w(TAG, "Google sign in failed", e);
+                    // ...
+                }
             }
+        }}
+
+         fun firebaseAuthWithGoogle(acct: GoogleSignInAccount?) {
+            //Log.d(TAG, "firebaseAuthWithGoogle:" + acct.getId());
+           // token = acct?.getIdToken()
+            var credential = GoogleAuthProvider.getCredential(token, null);
+            mAuth.signInWithCredential(credential)
+                    .addOnCompleteListener(this, OnCompleteListener<AuthResult>() {
+                        @Override
+                        fun onComplete(task: Task<AuthResult>) {
+                            if (task.isSuccessful()) {
+                                // Sign in success, update UI with the signed-in user's information
+                                //Log.d(TAG, "signInWithCredential:success");
+                                var user = mAuth.getCurrentUser();
+
+                                LoadSurroundingAreas()
+                                //updateUI(user);
+                            } else {
+                                // If sign in fails, display a message to the user.
+                                //Log.w(TAG, "signInWithCredential:failure", task.getException());
+                                //Snackbar.make(findViewById(R.id.main_layout), "Authentication Failed.", Snackbar.LENGTH_SHORT).show();
+                                //updateUI(null);
+                            }
+
+                            // ...
+                        }
+                    });
         }
     }
 
-    fun firebaseAuthWithGoogle(acct: GoogleSignInAccount) {
-        //Log.d(TAG, "firebaseAuthWithGoogle:" + acct.getId());
 
-        var credential = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
-        mAuth.signInWithCredential(credential)
-                .addOnCompleteListener(this, OnCompleteListener<AuthResult>() {
-                    @Override
-                    fun onComplete( task: Task<AuthResult>) {
-                        if (task.isSuccessful()) {
-                            // Sign in success, update UI with the signed-in user's information
-                            //Log.d(TAG, "signInWithCredential:success");
-                            var user = mAuth.getCurrentUser();
-                            //updateUI(user);
-                        } else {
-                            // If sign in fails, display a message to the user.
-                            //Log.w(TAG, "signInWithCredential:failure", task.getException());
-                            //Snackbar.make(findViewById(R.id.main_layout), "Authentication Failed.", Snackbar.LENGTH_SHORT).show();
-                            //updateUI(null);
-                        }
 
-                        // ...
-                    }
-                });
-    }
-}
